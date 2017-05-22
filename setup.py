@@ -17,7 +17,7 @@ def fpath(name):
 def read(fname):
     return open(fpath(fname)).read()
 
-init_str = read(fpath('domainfuzzer/__init__.py'))
+init_str = read(fpath('libtyposquats/__init__.py'))
 
 
 def grep(attr, file=None):
@@ -29,9 +29,9 @@ def grep(attr, file=None):
 
 
 setup(
-    name='domainfuzzer',
+    name='libtyposquats',
     version=grep('__version__'),
-    url='https://github.com/ics/domainfuzzer/',
+    url='https://github.com/ics/libtyposquats/',
     license='BSD',
     author='Alexandru Ciobanu',
     author_email='iscandr@gmail.com',
@@ -41,14 +41,15 @@ setup(
     packages=find_packages(exclude=['tests']),
     platforms='any',
     package_data={
-        'domainfuzzer.data': ['*.dat']
+        'libtyposquats.data': ['*.dat']
     },
     entry_points={
         'console_scripts': [
-            'domainfuzzer=domainfuzzer.fuzz:main'
+            'domainfuzzer=libtyposquats.fuzz:main'
         ]
     },
-    install_requires=['GeoIP', 'dnspython', 'ssdeep', 'whois', 'tqdm'],
+    install_requires=['uvloop', 'GeoIP', 'dnspython', 'ssdeep', 'whois',
+                      'tqdm'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Information Technology',
