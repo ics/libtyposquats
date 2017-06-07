@@ -35,8 +35,7 @@ setup(
     license='BSD',
     author='Alexandru Ciobanu',
     author_email='iscandr@gmail.com',
-    description='Fuzz domains to detect possible typosquatters, '
-                'phishing attacks, etc.',
+    description='Detect possible typosquatters, phishing attacks, etc.',
     long_description=__doc__,
     packages=find_packages(exclude=['tests']),
     platforms='any',
@@ -45,7 +44,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'domainfuzzer=libtyposquats.fuzz:main'
+            'domainfuzzer=libtyposquats.__main__:main'
         ]
     },
     install_requires=['uvloop', 'GeoIP', 'dnspython', 'ssdeep', 'whois',

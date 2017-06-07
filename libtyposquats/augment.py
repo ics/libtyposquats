@@ -9,9 +9,9 @@ import dns.resolver
 import pkg_resources
 import ssdeep
 import whois
-from domainfuzzer import random_str
+from . import random_str
 
-GeoIPDB = pkg_resources.resource_filename('domainfuzzer.data', 'GeoIP.dat')
+GeoIPDB = pkg_resources.resource_filename('libtyposquats.data', 'GeoIP.dat')
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
@@ -54,7 +54,7 @@ class Augmenter:
             response = http.recv(1024).decode('utf-8')
             http.close()
         except Exception as e:
-            print(e)
+            logging.error(e)
             pass
         else:
             sep = '\r\n' if '\r\n' in response else '\n'
@@ -73,8 +73,8 @@ class Augmenter:
             smtp.connect((mx, 25))
             response = smtp.recv(1024).decode('utf-8')
             smtp.close()
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(e)
         else:
             sep = '\r\n' if '\r\n' in response else '\n'
             hello = response.split(sep)[0]

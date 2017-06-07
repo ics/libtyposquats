@@ -2,7 +2,7 @@ import os
 import random
 import binascii
 
-__version__ = '0.0.1'
+__version__ = '0.1.0'
 
 
 def random_str(length=None):
