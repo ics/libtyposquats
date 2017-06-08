@@ -12,12 +12,12 @@ import whois
 from . import random_str
 
 GeoIPDB = pkg_resources.resource_filename('libtyposquats.data', 'GeoIP.dat')
-logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 class Augmenter:
 
     def __init__(self, domain, original_url, **kwargs):
+        self.log = self._create_logger(logging.INFO)
         self._ua = kwargs.get('useragent', 'Mozilla/5.0')
         self.original_url = original_url
         self.original_domain = original_url.netloc or original_url.path
@@ -26,9 +26,15 @@ class Augmenter:
                          v and hasattr(self, k)]
         self._dns()
 
+    def _create_logger(self, loglevel):
+        logger = logging.getLogger(self.__class__.__name__)
+        logger.addHandler(logging.StreamHandler())
+        logger.setLevel(loglevel)
+        return logger
+
     def augment(self):
         for a in self.augments:
-            logging.debug('Running {} augmenter for {}'.format(a, self.domain))
+            self.log.debug(f'Running {a} augmenter for {self.domain}')
             getattr(self, a)()
         return self.domain
 
@@ -54,8 +60,7 @@ class Augmenter:
             response = http.recv(1024).decode('utf-8')
             http.close()
         except Exception as e:
-            logging.error(e)
-            pass
+            self.log.error(f'{self.domain.name}: {e}')
         else:
             sep = '\r\n' if '\r\n' in response else '\n'
             headers = response.split(sep)
@@ -74,7 +79,7 @@ class Augmenter:
             response = smtp.recv(1024).decode('utf-8')
             smtp.close()
         except Exception as e:
-            logging.error(e)
+            self.log.error(f'{self.domain.name}: {e}')
         else:
             sep = '\r\n' if '\r\n' in response else '\n'
             hello = response.split(sep)[0]
@@ -90,29 +95,29 @@ class Augmenter:
         try:
             ans = resolv.query(self.domain.name, 'SOA')
             self.domain.dns_ns = str(sorted(ans)[0]).split(' ')[0][:-1].lower()
-        except Exception:
-            pass
+        except Exception as e:
+            self.log.debug(e)
 
         if self.domain.dns_ns:
             try:
                 ans = resolv.query(self.domain.name, 'A')
                 self.domain.dns_a = str(sorted(ans)[0])
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(e)
 
             try:
                 ans = resolv.query(self.domain.name, 'AAAA')
                 self.domain.dns_aaaa = str(sorted(ans)[0])
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(e)
 
             try:
                 ans = resolv.query(self.domain.name, 'MX')
                 mx = str(sorted(ans)[0].exchange)[:-1].lower()
                 if mx and mx != 'localhost':
                     self.domain.dns_mx = mx
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.debug(e)
 
         if not self.domain.any(['dns_a', 'dns_aaaa']):
             try:
@@ -151,13 +156,14 @@ class Augmenter:
     def whois(self):
         if self.domain.any(['dns_a', 'dns_ns']):
             try:
+                #: the whois lib is using Popen.communicate() w/o timeout
                 whoisdb = whois.query(self.domain.name)
                 self.domain.whois_created = str(
                     whoisdb.creation_date).replace(' ', 'T')
                 self.domain.whois_updated = str(
                     whoisdb.last_updated).replace(' ', 'T')
-            except Exception:
-                pass
+            except Exception as e:
+                self.log.error(e)
 
     def geoip(self):
         if self.domain.any('dns_a'):
@@ -167,7 +173,7 @@ class Augmenter:
                 country = gi.country_name_by_addr(self.domain.dns_a)
                 cc = gi.country_code_by_addr(self.domain.dns_a)
             except TypeError as te:
-                logging.error(te)
+                self.log.error(te)
             else:
                 if country:
                     self.domain.geoip_country = country.split(',')[0]
@@ -187,7 +193,7 @@ class Augmenter:
                 ctph = ssdeep.hash(resp.read().decode())
             except Exception as ue:
                 fmt = 'Could not calculate CTPH for {} ({})'
-                logging.error(fmt.format(fuzzed_url, ue))
+                self.log.error(fmt.format(fuzzed_url, ue))
             else:
                 self.domain.ctph = ctph
                 self.domain.ssdeep_score = ssdeep.compare(
