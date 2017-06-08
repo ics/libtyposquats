@@ -7,7 +7,7 @@ import asyncio
 import argparse
 from urllib import request
 from urllib.parse import urlparse
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 import ssdeep
 from libtyposquats.typosquats import Typosquats, sorted_attrs
@@ -19,6 +19,7 @@ try:
     asyncio.set_event_loop(loop)
 except ImportError:
     loop = asyncio.get_event_loop()
+
 
 log = logging.getLogger('libtyposquats')
 log.addHandler(logging.StreamHandler())
@@ -40,20 +41,22 @@ async def find_typosquats(url, **kwargs):
     dict_ = kwargs.get('dictionary', None)
     ua = kwargs.get('useragent', None)
 
-    original_ctph = (await loop.run_in_executor(None, _calc_ctph, url, ua))
+    original_ctph = await loop.run_in_executor(None, _calc_ctph, url, ua)
     log.debug(f'CTPH of original URL is: {original_ctph}')
 
-    tq = Typosquats(domain=url.netloc)
     # typosquats = await tq.generate(**kwargs)
-    typosquats = (await loop.run_in_executor(None, tq.generate, dict_))
+    tq = Typosquats(domain=url.netloc)
+    typosquats = await loop.run_in_executor(None, tq.generate, dict_)
     log.info(f'Generated {len(typosquats)} typosquats')
 
-    results = await asyncio.gather(*[run_augmenter(t, url, **kwargs)
-                                     for t in typosquats])
+    tasks = [run_augmenter(t, url, **kwargs) for t in typosquats]
+
+    results = await asyncio.gather(*tasks)
     return results
 
 
 async def run_augmenter(typosquat, url, **kwags):
+    log.debug(f'{typosquat.name}: starting augmenter ***')
     result = await loop.run_in_executor(
             None, augment_sync, typosquat,
             url, kwags)
@@ -61,7 +64,6 @@ async def run_augmenter(typosquat, url, **kwags):
 
 
 def augment_sync(typosquat, original, kwargs):
-    log.debug('Augmenting...')
     augmenter = Augmenter(typosquat, original, **kwargs)
     return augmenter.augment()
 
@@ -109,6 +111,9 @@ def _parse_args(argv):
     parser.add_argument('-u', '--useragent', type=str,
                         default='Mozilla/5.0',
                         help="User-agent to use for HTTP requests")
+    parser.add_argument('-v', '--verbose', action='store_const',
+                        dest='loglevel', const=logging.DEBUG,
+                        default=logging.WARNING)
 
     return parser.parse_args(argv[1:])
 
@@ -116,8 +121,9 @@ def _parse_args(argv):
 def main(argv=None):
     if argv is None:
         argv = sys.argv
-
     args = _parse_args(argv)
+    log.setLevel(args.loglevel)
+
     if '://' not in args.domain:
         # no scheme, assuming http
         args.domain = 'http://' + args.domain
@@ -125,7 +131,7 @@ def main(argv=None):
     url = urlparse(args.domain)
     del args.domain
 
-    executor = ProcessPoolExecutor(max_workers=args.workers)
+    executor = ThreadPoolExecutor(max_workers=args.workers)
     loop.set_default_executor(executor)
 
     try:
@@ -133,8 +139,10 @@ def main(argv=None):
     except KeyboardInterrupt:
         loop.stop()
     finally:
+        executor.shutdown()
         loop.close()
 
+    log.info('[*] Done! Generating output...')
     if args.csv:
         log.info('[*] Outputting CSV...')
         out = csv.writer(sys.stdout)
@@ -151,6 +159,7 @@ def main(argv=None):
         for d in results:
             print(row_fmt.format(d.fuzzer, d.name, str(d.dns_a),
                                  str(d.geoip_cc), str(d.dns_ns)))
+
 
 if __name__ == '__main__':
     sys.exit(main())
