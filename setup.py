@@ -47,8 +47,7 @@ setup(
             'domainfuzzer=libtyposquats.__main__:main'
         ]
     },
-    install_requires=['uvloop', 'GeoIP', 'dnspython', 'ssdeep', 'whois',
-                      'tqdm'],
+    install_requires=['uvloop', 'GeoIP', 'dnspython', 'ssdeep', 'whois'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Information Technology',
