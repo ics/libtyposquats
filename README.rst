@@ -2,7 +2,7 @@ Libtyposquats
 =============
 
 Typosquats check library
-Python 3.5+ spin of `dnstwist <https://github.com/elceef/dnstwist>`_.
+Python 3.6+ spin of `dnstwist <https://github.com/elceef/dnstwist>`_.
 
 
 Usage
