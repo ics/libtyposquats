@@ -1,7 +1,8 @@
-Domainfuzzer
-============
+Libtyposquats
+=============
 
-Python 3.3+ fork of `dnstwist <https://github.com/elceef/dnstwist>`_.
+Typosquats check library
+Python 3.5+ spin of `dnstwist <https://github.com/elceef/dnstwist>`_.
 
 
 Usage
@@ -11,15 +12,13 @@ Usage
 .. code-block:: python
 
     >>> from urllib.parse import urlparse
-    >>> from domainfuzzer.domain import DomainFuzz
-    >>> from domainfuzzer.augment import Augmenter
+    >>> from libtyposquats.typosquats import Typosquats
+    >>> from libtyposquats.augment import Augmenter
     >>> from pprint import pprint
     >>> url = urlparse('http://europa.eu')
-    >>> fuzzed = DomainFuzz(url.netloc)
-    >>> domains = fuzzed.domains
+    >>> domains = Typosquats(url.netloc).generate()
     >>> checks = {'banners': True, 'whois': True, 'geoip': True}
-    >>> augmenter = Augmenter(domains[56], url, checks)
-    >>> augmenter.augment()
+    >>> augmenter = Augmenter(domains[56], url, **checks)
     >>> result = augmenter.augment()
     >>> pprint(result.__dict__)
     >>> {'dns_a': '46.28.105.3',
@@ -38,10 +37,10 @@ Usage
 
     ./domainfuzzer --help
     usage: domainfuzzer [-h] [-c | -j] [-r] [-w] [-g] [-b] [-s] [-m] [-d FILE]
-                        [-t NUMBER] [-u USERAGENT]
-                        domain
+                   [-t NUMBER] [-u USERAGENT] [-v]
+                   domain
 
-    Fuzz domains to detect possible typosquatters, phishing attacks, etc.
+    Detect possible typosquatters, phishing attacks, etc.
 
     positional arguments:
       domain                domain name or URL to check
@@ -63,3 +62,4 @@ Usage
                             start at most NUMBER of workers (default: 8)
       -u USERAGENT, --useragent USERAGENT
                             User-agent to use for HTTP requests
+      -v, --verbose
