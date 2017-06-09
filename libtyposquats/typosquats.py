@@ -6,6 +6,14 @@ tld_names = pkg_resources.resource_string('libtyposquats.data',
                                           'effective_tld_names.dat')
 
 
+def is_valid(domain=None):
+    drex = (r'^(?=.{4,255}$)([a-zA-Z0-9][a-zA-Z0-9-]{,61}[a-zA-Z0-9]\.)+'
+            r'[a-zA-Z0-9]{2,5}$')
+    drex = re.compile('(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\.)+'
+                      '[a-zA-Z]{2,63}\.?$)', re.IGNORECASE)
+    return re.match(drex, domain)
+
+
 def sorted_attrs(class_):
     attrs = inspect.getmembers(class_, lambda a: not (inspect.isroutine(a)))
     _sorted_attrs = [a for a in attrs if not
@@ -41,6 +49,9 @@ class Typosquat:
 
     def __str__(self):
         return f'{self.name}: {self.ssdeep_score} {self.http_banner}'
+
+    def __eq__(self, other):
+        return self.name == other.name
 
     def any(self, keys):
         if isinstance(keys, str):
@@ -320,6 +331,17 @@ class Typosquats:
             yield prefix + word + '-' + name
             yield prefix + word + name
 
+    def _filter_domains(self):
+        seen = set()
+        filtered = []
+
+        for d in self.domains:
+            if is_valid(d.name) and d.name not in seen:
+                seen.add(d.name)
+                filtered.append(d)
+
+        self.domains = filtered
+
     def generate(self, dictionary=None):
         self.domains.append(
             Typosquat(fuzzer='Original*',
@@ -361,4 +383,5 @@ class Typosquats:
                     Typosquat(fuzzer='Dictionary',
                            name='{}.{}'.format(domain, self.tld))
                 )
+        self._filter_domains()
         return self.domains
