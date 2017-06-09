@@ -5,8 +5,8 @@ from urllib.parse import urlparse
 
 import pytest
 from dns.resolver import Answer
-from domainfuzzer.augment import Augmenter
-from domainfuzzer.domain import DomainFuzz, DomainDict
+from libtyposquats.augment import Augmenter
+from libtyposquats.typosquats import Typosquats
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def dictfile():
 
 @pytest.fixture
 def domain():
-    d = DomainFuzz('google.co.uk')
+    d = Typosquats('google.co.uk')
     d.generate()
     return d
 
@@ -81,9 +81,8 @@ def test_fuzz_domains_dict(url):
     with patch('builtins.open', mock_open()) as m:
         m.return_value = io.StringIO("auth\nlogin\ntest\n")
 
-        ddict = DomainDict(url.netloc)
-        ddict.load_dict('/dummy/path')
-        ddict.generate()
+        ddict = Typosquats(url.netloc)
+        ddict.generate(dictionary='/dummy/path')
 
         m.assert_called_once_with('/dummy/path')
         assert (len(ddict.domains) > 0)
@@ -92,7 +91,7 @@ def test_fuzz_domains_dict(url):
 def test_augmenter(domain, url, augments):
     with patch('dns.resolver.Resolver.query', fake_answer()), \
             patch('smtplib.SMTP', fake_smtp()) as smtp, \
-            patch('domainfuzzer.augment.socket.socket', fake_sock()), \
+            patch('libtyposquats.augment.socket.socket', fake_sock()), \
             patch('urllib.request.urlopen', fake_urlopen()):
         test_domain = domain.domains[1]
         assert test_domain.name == 'google.coa.uk'
